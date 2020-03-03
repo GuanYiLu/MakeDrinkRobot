@@ -225,6 +225,10 @@ namespace multimodal
                         {
                             Show_capture(sender, e);
                         }
+                        while (mode_4)
+                        {
+                            Show_capture_b(sender, e);
+                        }
                         break;
                     case "B":
                         //uRServerAction.Move(new float[] { -0.252f, -0.303f, -0.090f, 1.77f, -2.7f, 0.19f });
@@ -584,9 +588,7 @@ namespace multimodal
             else if (mode_3 == true)
             {
                 System.Windows.Forms.Application.Idle -= new EventHandler(Show_capture);
-                Dictionary<TextBox, string> keyValues = new Dictionary<TextBox, string>();
-                keyValues.Add(textBox2, "準備您的飲料中，請稍後~");
-                WriteTextSafe(keyValues);
+                TextBoxWriteText(textBox2, "準備您的飲料中，請稍後~");
                 //textBox2.Text = "準備您的飲料中，請稍後~";
                 mode_3 = false;
 
@@ -648,7 +650,8 @@ namespace multimodal
 
                 if (drink_1)
                 {
-                    textBox2.Text = DrinkName.first_drink_name;
+                    TextBoxWriteText(textBox2, DrinkName.first_drink_name);
+                    //textBox2.Text = DrinkName.first_drink_name;
                     mode_4 = false;                  
                     robotMakeDrinkControl.rotate_bottle(bottle_right_r, cup_one_r, bottle_right_l);
                     move_1 = true;
@@ -656,7 +659,8 @@ namespace multimodal
                 }
                 else if (drink_2)
                 {
-                    textBox2.Text = DrinkName.second_drink_name;
+                    TextBoxWriteText(textBox2, DrinkName.second_drink_name);
+                    //textBox2.Text = DrinkName.second_drink_name;
                     mode_4 = false;
                     robotMakeDrinkControl.open_bottle(bottle_center_r, cup_one_r, cup_one_l, bottle_center_l);
                     move_2 = true;
@@ -664,7 +668,8 @@ namespace multimodal
                 }
                 else if (drink_3)
                 {
-                    textBox2.Text = DrinkName.second_drink_name + DrinkName.first_drink_name;
+                    TextBoxWriteText(textBox2, DrinkName.second_drink_name + DrinkName.first_drink_name);
+                    //textBox2.Text = DrinkName.second_drink_name + DrinkName.first_drink_name;
 
                     if (move_1 == false)
                     {                      
@@ -687,7 +692,8 @@ namespace multimodal
                 }
                 else if (drink_4)
                 {
-                    textBox2.Text = DrinkName.third_drink_name + DrinkName.first_drink_name;
+                    TextBoxWriteText(textBox2, DrinkName.third_drink_name + DrinkName.first_drink_name);
+                    //textBox2.Text = DrinkName.third_drink_name + DrinkName.first_drink_name;
 
                     if (move_1 == false)
                     {             
@@ -713,7 +719,8 @@ namespace multimodal
 
             else if (mode_4 == false)
             {
-                textBox2.Text = "您的飲料已經準備好了，請拿取，謝謝~";
+                TextBoxWriteText(textBox2, "您的飲料已經準備好了，請拿取，謝謝~");
+                //textBox2.Text = "您的飲料已經準備好了，請拿取，謝謝~";
               //  robotMakeDrinkControl.pick_cup(cup_one_r,cup_one_l);
 
                 cap.Stop();
@@ -974,9 +981,7 @@ namespace multimodal
             }
             else
             {
-                Dictionary<TextBox, string> keyValues = new Dictionary<TextBox, string>();
-                keyValues.Add(textBox7, count.ToString());
-                WriteTextSafe(keyValues);
+                TextBoxWriteText(textBox7, count.ToString());
                 stop_run();
             }
 
@@ -995,6 +1000,12 @@ namespace multimodal
             {
                 obj.ElementAt(0).Key.Text = obj.ElementAt(0).Value;
             }
+        }
+        void TextBoxWriteText(TextBox textBox, string text)
+        {
+            var d = new Dictionary<TextBox, string>();
+            d.Add(textBox, text);
+            WriteTextSafe(d);
         }
 
         void Show_capture_b(object sender, EventArgs e)
@@ -1093,7 +1104,8 @@ namespace multimodal
 
             else
             {
-                textBox2.Text = "Done";
+                TextBoxWriteText(textBox2, "Done");
+                //textBox2.Text = "Done";
 
 
                 int[] array = new int[] { bx1, bx2, bx3 };
