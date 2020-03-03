@@ -52,7 +52,7 @@ namespace multimodal
             {
                 Console.WriteLine("Failed to open the port!");
                 Console.WriteLine("Press any key to terminate...");
-                Console.ReadKey();
+                //Console.ReadKey();
                 return;
             }
 

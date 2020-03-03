@@ -32,149 +32,30 @@ using Emgu.CV.Util;
 using Emgu.CV.CvEnum;
 
 using PerspectiveTransformSetting;
-using URControler2;
+using WebSocketSharp;
+// CHINF 的類別庫
+//using URControler2;
+using CIRLABURControl;
 
 
 
 namespace multimodal
 {
+
+
+    
     public partial class Form1 : Form
     {
 
         URServerAction uRServerAction_left;
         URServerAction uRServerAction_right;
+        RobotMakeDrinkControl robotMakeDrinkControl;
 
+        private delegate void SafeCallDelegate(Dictionary<TextBox, string> obj);
 
-        // parameter ///////
-        float[] robot_initial_pos_r = { -0.288F, 0.069F, 0.322F, 1.23F, -2.59F, -0.83F };
-       // float[] robot_initial_pos_l2 = { 0.395F, 0.030F, 0.172F, 0.86F, 3.19F, 0.76F };
-        float[] robot_initial_pos_l = { 0.395F, 0.030F, 0.172F, 0.86F, 3.19F, 0.76F };
-        float[] robot_initial_pos_rc = { -0.337F, 0.110F, -0.123F, 2.174F, -2.233F, 0.002F };
-        float[] robot_initial_pos_lc = { 0.335F, -0.100F, -0.153F, 2.447F, 2.367F, 2.475F };
-
-
-        float image_right_x = -0.065F;
-        float image_right_y = 0.01F;
-
-        float image_left_x = 0.05F;
-        float image_left_y = 0.04F;
-
-        ///////////////////////////////////////////////
-
-        SocketTool mipy_socket;
-        MxMotor motor1;
-        int test;
-        int initial_pos = 2020;
-        int obj_pos = 1350;
-
-
-        YoloWrapper gestureWrapper;
-        YoloWrapper objectWrapper;
-
-        IEnumerable<YoloItem> items1;
-        IEnumerable<YoloItem> items2;
-
-        private  VideoCapture cap = null;
-        private VideoCapture cap2 = null;
-        Bitmap cap_img;
-        Mat img1;
-
-        static int OpenCamIndex_right = 0;
-        static int OpenCamIndex_right_top = 2;
-        static int OpenCamIndex_left = 1;
-        static int OpenCamIndex_left_top = 3;
-
-
-        const int MAXCAM = 2;
-        Mat[] t_matrix;
-        Form_PtSetting cam_set_right = new Form_PtSetting();
-        Form_PtSetting cam_set_left = new Form_PtSetting();
-
-
-
-        int cx1, cy1, cx2, cy2, cx3, cy3; //杯子x,y
-        int bx1, by1, bx2, by2, bx3, by3; //瓶子x,y
-
-        int cw1, cw2, cw3, ch1, ch2, ch3; //杯子width, height
-        int bw1, bw2, bw3, bh1, bh2, bh3;  //瓶子width, height
-        int brx, bry, bcx, bcy, blx, bly; //瓶子右、中、左 x ,y
-        int brw, brh, bcw, bch, blw, blh; //瓶子右、中、左 width, height
-
-        int line = 160; //放置區及瓶子區分隔線
-
-        bool mode_1 = true; //選取飲料(true為未選)
-        bool mode_2 = true; //選取糖度(true為未選)
-        bool mode_3 = true; //偵測杯子(true為未執行)
-        bool mode_4 = true; //飲料倒完為false
-        bool cup_detect = false;
-
-        bool move_1 = false;
-        bool move_2 = false;
-        bool move_3 = false;
-
-        bool mipy = false;
-
-
-        bool cup_1, cup_2, cup_3 = false; // 杯子個數
-        bool bottle_1, bottle_2, bottle_3 = false; //瓶子個數
-        bool drink_1, drink_2, drink_3, drink_4 = false; //飲料種類(所選取的飲料類別為true)
-
-        int count_t = 0; //計數
-        int count, count1, count2, count3, count4 = 0; //計數
-
-        string user_name;
-
-        System.Windows.Forms.Timer timer;
-
-        float[] bottle_right_r = new float[] { 0, 0 };
-        float[] bottle_right_l = new float[] { 0, 0 };
-        //float[] bottle_right = new float[] { 0, 0 };
-        float[] bottle_center_r = new float[] { 0, 0 };
-        float[] bottle_center_l = new float[] { 0, 0 };
-        float[]  bottle_left_r = new float[] { 0, 0 };
-        float[] bottle_left_l = new float[] { 0, 0 };
-        float[] cup_one_r = new float[] { 0,0};
-        float[] cup_one_l = new float[] { 0, 0 };
-        float[] cup_two = new float[] { 0, 0 };
-        float[] cup_three = new float[] { 0, 0 };
-
-        //float[] bottle_right_f;
-        //float[] bottle_left_f;
-        float[] cup_one_rf;
-        float[] cup_two_rf;
-        float[] cup_three_rf;
-
-        float[] cup_one_lf;
-        float[] cup_two_lf;
-        float[] cup_three_lf;
-
-
-        private void Form1_Load(object sender, EventArgs e)
+        public Form1()
         {
-
-        }
-
-        private void textBox3_TextChanged_1(object sender, EventArgs e)
-        {
-
-        }
-
-        private void checkBox1_CheckedChanged(object sender, EventArgs e)
-        {
-            if (Mipy.Checked)
-            {
-                mipy = true;
-            }
-            else
-            {
-                mipy = false;
-            }
-        }
-
-
-
-        private void button2_Click(object sender, EventArgs e)
-        {
+            InitializeComponent();
             int port_r = 1100;
             string addr = "0.0.0.0";
             ListenerBaseTcpListener listener_r = new ListenerBaseTcpListener(port_r, addr);
@@ -215,67 +96,241 @@ namespace multimodal
             Console.WriteLine("Connected!");
             uRServerAction_left = new URServerAction(stream_l);
 
-           // uRServerAction_left.Move(robot_initial_pos_l);
+
+            ///////////////////////////////////////////////////////////////////////////////////////////
+
+
+            robotMakeDrinkControl = new RobotMakeDrinkControl(uRServerAction_left, uRServerAction_right);
+        }
+
+
+        SocketTool mipy_socket;
+        MxMotor motor1 = new MxMotor();
+        int test;
+        int initial_pos = 2020;
+        int obj_pos = 1385;
+
+        
+        YoloWrapper gestureWrapper;
+        YoloWrapper objectWrapper_side;
+        YoloWrapper objectWrapper_top;
+
+        IEnumerable<YoloItem> items1;
+        IEnumerable<YoloItem> items2;
+
+        private VideoCapture cap = null;
+        private VideoCapture cap2 = null;
+        Bitmap cap_img;
+        Mat img1;
+
+        static int OpenCamIndex_right = 0;
+        static int OpenCamIndex_right_top = 2;
+        static int OpenCamIndex_left = 1;
+        static int OpenCamIndex_left_top = 3;
+
+
+        const int MAXCAM = 2;
+        Mat[] t_matrix;
+        Form_PtSetting cam_set_right = new Form_PtSetting();
+        Form_PtSetting cam_set_left = new Form_PtSetting();
 
 
 
-            //uRServerAction.FreeDrive(10000);           
-            //uRServerAction.TurnJoint(3);
-            //uRServerAction.MoveJoint(0, -0.5F);
+        int cx1, cy1, cx2, cy2, cx3, cy3; //杯子x,y
+        int bx1, by1, bx2, by2, bx3, by3; //瓶子x,y
+
+        int cw1, cw2, cw3, ch1, ch2, ch3; //杯子width, height
+        int bw1, bw2, bw3, bh1, bh2, bh3;  //瓶子width, height
+        int brx, bry, bcx, bcy, blx, bly; //瓶子右、中、左 x ,y
+        int brw, brh, bcw, bch, blw, blh; //瓶子右、中、左 width, height
+
+        int line = 160; //放置區及瓶子區分隔線
+
+        bool mode_1 = true; //選取飲料(true為未選)
+        bool mode_1_first_answer = true;
+        bool mode_2 = true; //選取糖度(true為未選)
+        bool mode_3 = true; //偵測杯子(true為未執行)
+        bool mode_4 = true; //飲料倒完為false
+        bool cup_detect = false;
+
+        bool move_1 = false;        
+        bool move_2 = false;
+        bool move_3 = false;
 
 
-            //uRServerAction_right.ForceMode(0, 10);
-            //Thread.Sleep(5000);
-            //uRServerAction_right.EndForceMode();
-            //Console.WriteLine("***end");
+        bool mipy = false;
+
+
+        bool cup_1, cup_2, cup_3 = false; // 杯子個數
+        bool bottle_1, bottle_2, bottle_3 = false; //瓶子個數
+        bool drink_1, drink_2, drink_3, drink_4 = false; //飲料種類(所選取的飲料類別為true)
+        bool gradual_check = false;
+
+        int count_t = 0; //計數
+        int count, count1, count2, count3, count4 = 0; //計數
+
+        string user_name;
+
+        System.Windows.Forms.Timer timer;
+
+        float[] bottle_right_r = new float[] { 0, 0 };
+        float[] bottle_right_l = new float[] { 0, 0 };
+        //float[] bottle_right = new float[] { 0, 0 };
+        float[] bottle_center_r = new float[] { 0, 0 };
+        float[] bottle_center_l = new float[] { 0, 0 };
+        float[] bottle_left_r = new float[] { 0, 0 };
+        float[] bottle_left_l = new float[] { 0, 0 };
+        float[] cup_one_r = new float[] { 0, 0 };
+        float[] cup_one_l = new float[] { 0, 0 };
+        float[] cup_two = new float[] { 0, 0 };
+        float[] cup_three = new float[] { 0, 0 };
+
+        //float[] bottle_right_f;
+        //float[] bottle_left_f;
+        float[] cup_one_rf;
+        float[] cup_two_rf;
+        float[] cup_three_rf;
+
+        float[] cup_one_lf;
+        float[] cup_two_lf;
+        float[] cup_three_lf;
+
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            var ws = new WebSocket("wss://test.chinf.me/listener/ur/");
+            ws.OnMessage += (_, ee) =>
+            {
+                switch (ee.Data)
+                {
+                    case "A":
+                        //uRServerAction.Move(new float[] { -0.394f, 0.059f, -0.093f, 0.28f, -3.2f, -0.15f });
+                        Console.WriteLine($"Run A");
+                        uRServerAction_left.GripperOpen();
+                        uRServerAction_right.GripperOpen();
+                        uRServerAction_right.Move(RobotInitial.robot_initial_pos_r);
+                        uRServerAction_left.Move(RobotInitial.robot_initial_pos_l);
+
+                        clear_all();
+
+                        mode_1 = false;
+                        mode_2 = false;
+                        //mode_3 = false;
+                        drink_1 = true;
+
+                        cap = new Emgu.CV.VideoCapture(1, VideoCapture.API.DShow);
+
+                        objectWrapper_side = new YoloWrapper("yolov3.cfg", "yolov3.weights", "coco.names");
+                        while (mode_3)
+                        {
+                            Show_capture(sender, e);
+                        }
+                        break;
+                    case "B":
+                        //uRServerAction.Move(new float[] { -0.252f, -0.303f, -0.090f, 1.77f, -2.7f, 0.19f });
+                        Console.WriteLine($"Run B");
+                        break;
+                    default:
+                        Console.WriteLine($"{ee.Data} isn't know");
+                        break;
+                }
+            };
+            ws.Connect();
+            ws.Send("BALUS");
+        }
+
+        private void textBox3_TextChanged_1(object sender, EventArgs e)
+        {
+
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            if (Mipy.Checked)
+            {
+                mipy = true;
+            }
+            else
+            {
+                mipy = false;
+            }
+        }
+
+
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            
+
+            
         }
 
         private void button3_Click(object sender, EventArgs e)
         {
-            uRServerAction_left.Move(robot_initial_pos_lc);
+            uRServerAction_left.Move(RobotInitial.robot_initial_pos_lc);
             uRServerAction_left.TurnJoint(4, -15, 2);
             Thread.Sleep(2000);
 
-            uRServerAction_left.Move(robot_initial_pos_lc);
+            uRServerAction_left.Move(RobotInitial.robot_initial_pos_lc);
 
-            uRServerAction_left.GripperCloseForceMIN();
+            uRServerAction_left.GripperCloseMAX();
 
-            robot_initial_pos_lc[1] -= 0.020F;
+            RobotInitial.robot_initial_pos_lc[1] -= 0.020F;
 
-            uRServerAction_left.Move(robot_initial_pos_lc);
+            uRServerAction_left.Move(RobotInitial.robot_initial_pos_lc);
 
             Thread.Sleep(2000);
 
-            robot_initial_pos_lc[1] += 0.020F;
-            uRServerAction_left.Move(robot_initial_pos_lc);
+            RobotInitial.robot_initial_pos_lc[1] += 0.020F;
+            uRServerAction_left.Move(RobotInitial.robot_initial_pos_lc);
             uRServerAction_left.GripperOpen();
 
             Thread.Sleep(2000);
 
-            robot_initial_pos_lc[1] -= 0.01F;
-            uRServerAction_left.Move(robot_initial_pos_lc);
+            RobotInitial.robot_initial_pos_lc[1] -= 0.01F;
+            uRServerAction_left.Move(RobotInitial.robot_initial_pos_lc);
 
             uRServerAction_left.TurnJoint(-4, 25, 2);
 
             Thread.Sleep(5000);
-            robot_initial_pos_rc[1] += 0.02F;
-            uRServerAction_right.Move(robot_initial_pos_rc);
-            //robot_initial_pos_lc[1] -= 0.02F;
-            //uRServerAction_left.Move(robot_initial_pos_lc);
+            RobotInitial.robot_initial_pos_rc[1] += 0.02F;
+            uRServerAction_right.Move(RobotInitial.robot_initial_pos_rc);
+            //RobotInitial.robot_initial_pos_lc[1] -= 0.02F;
+            //uRServerAction_left.Move(RobotInitial.robot_initial_pos_lc);
             Thread.Sleep(2000);
 
-            uRServerAction_left.Move(robot_initial_pos_l);
+            uRServerAction_left.Move(RobotInitial.robot_initial_pos_l);
 
 
-            uRServerAction_right.Move(robot_initial_pos_r);
+            uRServerAction_right.Move(RobotInitial.robot_initial_pos_r);
 
         }
 
+        private void button1_Click(object sender, EventArgs e)
+        {
+            uRServerAction_left.GripperOpen();
+            uRServerAction_right.GripperOpen();
+            uRServerAction_right.Move(RobotInitial.robot_initial_pos_r);
+            uRServerAction_left.Move(RobotInitial.robot_initial_pos_l);
 
+            clear_all();
+
+            mode_1 = false;
+            mode_2 = false;
+            //mode_3 = false;
+            drink_1 = true;
+
+            cap = new Emgu.CV.VideoCapture(1, VideoCapture.API.DShow);
+
+            objectWrapper_side = new YoloWrapper("yolov3.cfg", "yolov3.weights", "coco.names");
+
+            System.Windows.Forms.Application.Idle += new EventHandler(Show_capture);
+
+        }
 
         private void button_settingFrom_Click(object sender, EventArgs e)
         {
-            motor1 = new MxMotor();
+            //motor1 = new MxMotor();
 
             test = motor1.ReadMxPosition();
 
@@ -289,19 +344,8 @@ namespace multimodal
         }
 
 
-
-
-
-        public Form1()
-        {
-            InitializeComponent();
-            
-        }
-
         private void Start_Click(object sender, EventArgs e)
         {
-
-            motor1 = new MxMotor();                    
             main_run();
         }
 
@@ -314,27 +358,21 @@ namespace multimodal
             timer.Interval = 1000;
 
             motor1.MxMotorSetPosition(initial_pos);
-            //uRServerAction_right.Move(new float[] { -0.288F, 0.069F, 0.322F, 1.23F, -2.59F, -0.83F });
-            //   uRServerAction_left.Move(new float[] { 0.418F, -0.120F, 0.216F, 2.5F, 2.28F, 0.35F });
-            
+
             if (Mipy.Checked)
             {
                 cap2 = new Emgu.CV.VideoCapture(2, VideoCapture.API.DShow);
 
                 mipy_socket = new SocketTool();
                 mipy_socket.creatClient("127.0.0.1", 8888);
-                Application.Idle += new EventHandler(Mipy_read_user); 
-                         
+                Application.Idle += new EventHandler(Mipy_read_user);
+
             }
             else
             {
                 read_py();
                 stop_Face();
             }
-
-           
-
-           
         }
 
 
@@ -345,17 +383,13 @@ namespace multimodal
             Bitmap cap_mipy = cap2.QueryFrame().Bitmap;
             Image<Bgr, Byte> image_mipy = new Image<Bgr, byte>(cap_mipy);
             Mat img_mipy = image_mipy.Mat;
-            imageBox1.Image= img_mipy;
-
-
+            imageBox1.Image = img_mipy;
 
             user_name = mipy_socket.client_ReadData();
             if (user_name != "None" && user_name != "Stranger!" && user_name != "")
             {
                 stop_Face();
             }
-
-            
 
         }
 
@@ -366,7 +400,6 @@ namespace multimodal
                 Application.Idle -= new EventHandler(Mipy_read_user);
                 textBox4.Text = user_name;
             }
-            
 
             gesture_run();
         }
@@ -374,6 +407,7 @@ namespace multimodal
         void clear_all()
         {
             mode_1 = true;
+            mode_1_first_answer = true;
             mode_2 = true;
             mode_3 = true;
             mode_4 = true;
@@ -388,6 +422,7 @@ namespace multimodal
             drink_2 = false;
             drink_3 = false;
             drink_4 = false;
+            gradual_check = false;
 
             move_1 = false;
             move_2 = false;
@@ -401,8 +436,11 @@ namespace multimodal
             count3 = 0;
             count4 = 0;
 
-
-
+            textBox1.Text = "";
+            textBox2.Text = "";
+            textBox4.Text = "";
+            textBox5.Text = "";
+            textBox7.Text = "";
 
         }
 
@@ -410,7 +448,7 @@ namespace multimodal
         void read_py()
         {
             //實體檔案名稱
-            string fileName = string.Format("username.txt");
+            string fileName = "username.txt";
 
             //起一個Process執行Python程式
             Process pyProc = new Process();
@@ -436,7 +474,7 @@ namespace multimodal
             pyProc.Close();
             string user = System.IO.File.ReadAllText(fileName);
             textBox4.Text = user;
-            File.Delete(fileName);
+            //File.Delete(fileName);
         }
 
         static void p_OutputDataReceived(object sender, DataReceivedEventArgs e)
@@ -478,49 +516,16 @@ namespace multimodal
 
         void gesture_run()
         {
-          //  System.Windows.Forms.Application.Idle -= new EventHandler(Show_capture_open);
             count = 0;
             textBox2.Text = "請問您想喝哪種飲料?";
-            textBox5.Text = "(1): 左邊瓶子 (2): 右邊瓶子 (3): 左+右邊瓶子";
+            textBox5.Text = "(1):" + DrinkName.first_drink_name + "   (2):" + DrinkName.second_drink_name + "   (3):" + DrinkName.gradual_name;
 
-
-
-            //   cap.SetCaptureProperty(Emgu.CV.CvEnum.CapProp.FrameWidth, 640);
-            //    cap.SetCaptureProperty(Emgu.CV.CvEnum.CapProp.FrameHeight, 480);
-
-            cap = new Emgu.CV.VideoCapture(0, VideoCapture.API.DShow);
-            // = new VideoCapture(1);
-
+            cap = new Emgu.CV.VideoCapture(1, VideoCapture.API.DShow);
             gestureWrapper = new YoloWrapper("yolov2-tiny_number_test.cfg", "yolov2-tiny_number_90000.weights", "number.names");
-            
+
             System.Windows.Forms.Application.Idle += new EventHandler(Show_capture_g);
         }
 
-
-   
-
-        private void button1_Click(object sender, EventArgs e)
-        {            
-            //uRServerAction_right.Move(new float[] { -0.288F, 0.069F, 0.322F, 1.23F, -2.59F, -0.83F });
-            //uRServerAction_left.Move(new float[] { 0.418F, -0.120F, 0.216F, 2.5F, 2.28F, 0.35F });
-
-
-
-            mode_1 = false;
-            mode_2 = false;
-            //mode_3 = false;
-
-            drink_2 = true;
-
-            cap = new Emgu.CV.VideoCapture(0, VideoCapture.API.DShow);
-            //gestureWrapper = new YoloWrapper("yolov2-tiny_number_test.cfg", "yolov2-tiny_number_90000.weights", "number.names");
-
-            //System.Windows.Forms.Application.Idle += new EventHandler(Show_capture_g);
-            objectWrapper = new YoloWrapper("yolov3.cfg", "yolov3.weights", "coco.names");
-
-            System.Windows.Forms.Application.Idle += new EventHandler(Show_capture);
-
-        }
 
         private void textBox3_TextChanged(object sender, EventArgs e)
         {
@@ -541,47 +546,57 @@ namespace multimodal
             count1 = 0;
             count2 = 0;
             count3 = 0;
+            count4 = 0;
 
             count = 0;
 
             if (mode_1 == true)
             {
                 System.Windows.Forms.Application.Idle -= new EventHandler(Show_capture_g);
-                //textBox2.Text = "Do you need sugar?";
-                //textBox5.Text = "(1: Yes 2: No)";
-                mode_1 = false;
-                motor1.MxMotorSetPosition(obj_pos);
-                System.Windows.Forms.Application.Idle += new EventHandler(Show_capture_open);
-                //System.Windows.Forms.Application.Idle += new EventHandler(Show_capture_g);
+                
+                if (gradual_check)
+                {                    
+                    textBox2.Text = "請問要搭配何種漸層?";
+                    textBox5.Text = "(1):" + DrinkName.second_drink_name + DrinkName.first_drink_name + "   (2):" + DrinkName.third_drink_name + DrinkName.first_drink_name;
+                    System.Windows.Forms.Application.Idle += new EventHandler(Show_capture_g);
+                }
+                else
+                {
+                    mode_1 = false;
+                    motor1.MxMotorSetPosition(obj_pos);
+                    System.Windows.Forms.Application.Idle += new EventHandler(Show_capture_open);
+                }
+
 
             }
             else if (mode_2 == true)
             {
-
-                    System.Windows.Forms.Application.Idle -= new EventHandler(Show_capture_open);
-                    textBox2.Text = "偵測杯子中";
-                    textBox5.Text = "";
-                    mode_2 = false;
-                    objectWrapper = new YoloWrapper("yolov3.cfg", "yolov3.weights", "coco.names");
-
-                    System.Windows.Forms.Application.Idle += new EventHandler(Show_capture);
+                System.Windows.Forms.Application.Idle -= new EventHandler(Show_capture_open);
+                textBox2.Text = "偵測杯子中";
+                textBox5.Text = "";
+                mode_2 = false;
+                objectWrapper_side = new YoloWrapper("yolov3.cfg", "yolov3.weights", "coco.names");
                 
+                System.Windows.Forms.Application.Idle += new EventHandler(Show_capture);
 
             }
 
             else if (mode_3 == true)
             {
                 System.Windows.Forms.Application.Idle -= new EventHandler(Show_capture);
-                textBox2.Text = "準備您的飲料中，請稍後~";
+                Dictionary<TextBox, string> keyValues = new Dictionary<TextBox, string>();
+                keyValues.Add(textBox2, "準備您的飲料中，請稍後~");
+                WriteTextSafe(keyValues);
+                //textBox2.Text = "準備您的飲料中，請稍後~";
                 mode_3 = false;
-                
+
 
                 if (cup_1 == true)
                 {
                     var c1x = cx1 + cw1 / 2;
                     var c1y = cy1 + ch1;
 
-                    cup_one_rf = cam_set_right.I2W(c1x, c1y, OpenCamIndex_right,true);
+                    cup_one_rf = cam_set_right.I2W(c1x, c1y, OpenCamIndex_right, true);
                     cup_one_r[0] = cup_one_rf[0] / 1000;
                     cup_one_r[1] = cup_one_rf[2] / 1000;
 
@@ -592,94 +607,76 @@ namespace multimodal
 
                 }
 
-                     System.Windows.Forms.Application.Idle += new EventHandler(Show_capture_b);
+                System.Windows.Forms.Application.Idle += new EventHandler(Show_capture_b);
 
             }
             else if (mode_4 == true)
             {
-                
-
-
                 System.Windows.Forms.Application.Idle -= new EventHandler(Show_capture_b);
-
-
-
                 var prx = brx + brw / 2;
                 var pry = bry + brh;
-
                 var plx = blx + blw / 2;
                 var ply = bly + blh;
-
                 var pcx = bcx + bcw / 2;
                 var pcy = bcy + bch;
 
                 float[] bottle_right_rf = cam_set_right.I2W(prx, pry, OpenCamIndex_right, true);  //轉正後的世界座標
-
                 bottle_right_r[0] = bottle_right_rf[0] / 1000;
                 bottle_right_r[1] = bottle_right_rf[2] / 1000;
 
                 float[] bottle_right_lf = cam_set_left.I2W(prx, pry, OpenCamIndex_left, true);
-
                 bottle_right_l[0] = bottle_right_lf[0] / 1000;
                 bottle_right_l[1] = bottle_right_lf[2] / 1000;
 
 
                 float[] bottle_left_rf = cam_set_right.I2W(plx, ply, OpenCamIndex_right, true);  //轉正後的世界座標
-
                 bottle_left_r[0] = bottle_left_rf[0] / 1000;
                 bottle_left_r[1] = bottle_left_rf[2] / 1000;
 
                 float[] bottle_left_lf = cam_set_left.I2W(plx, ply, OpenCamIndex_left, true);
-
                 bottle_left_l[0] = bottle_left_lf[0] / 1000;
                 bottle_left_l[1] = bottle_left_lf[2] / 1000;
 
 
+                float[] bottle_center_rf = cam_set_right.I2W(pcx, pcy, OpenCamIndex_right, true);  //轉正後的世界座標
+                bottle_center_r[0] = bottle_center_rf[0] / 1000;
+                bottle_center_r[1] = bottle_center_rf[2] / 1000;
 
-                //float[] bottle_center_rf = cam_set_right.I2W(pcx, pcy, OpenCamIndex_right, true);  //轉正後的世界座標
+                float[] bottle_center_lf = cam_set_left.I2W(pcx, pcy, OpenCamIndex_left, true);
+                bottle_center_l[0] = bottle_center_lf[0] / 1000;
+                bottle_center_l[1] = bottle_center_lf[2] / 1000;
 
-                //bottle_center_r[0] = bottle_center_rf[0] / 1000;
-                //bottle_center_r[1] = bottle_center_rf[2] / 1000;
-
-                //float[] bottle_center_lf = cam_set_left.I2W(pcx, pcy, OpenCamIndex_left, true);
-
-                //bottle_center_l[0] = bottle_center_lf[0] / 1000;
-                //bottle_center_l[1] = bottle_center_lf[2] / 1000;
-
-
-
-                if (drink_1 == true)
+                if (drink_1)
                 {
-                    textBox2.Text = "左邊瓶子";
-
-
-                    mode_4 = false;
-                    rotate_bottle(bottle_right_r, cup_one_r, bottle_right_l);
-
+                    textBox2.Text = DrinkName.first_drink_name;
+                    mode_4 = false;                  
+                    robotMakeDrinkControl.rotate_bottle(bottle_right_r, cup_one_r, bottle_right_l);
+                    move_1 = true;
+                    stop_run();
                 }
-                else if (drink_2 == true)
+                else if (drink_2)
                 {
-                    textBox2.Text = "右邊瓶子";
-
+                    textBox2.Text = DrinkName.second_drink_name;
                     mode_4 = false;
-
-                    pick_bottle(bottle_left_l, cup_one_l);
-                    //open_bottle(bottle_center_r, cup_one_r, cup_one_l, bottle_center_l);
-
+                    robotMakeDrinkControl.open_bottle(bottle_center_r, cup_one_r, cup_one_l, bottle_center_l);
+                    move_2 = true;
+                    stop_run();
                 }
-                else if (drink_3 == true)
+                else if (drink_3)
                 {
-                    textBox2.Text = "左+右邊瓶子";
+                    textBox2.Text = DrinkName.second_drink_name + DrinkName.first_drink_name;
 
                     if (move_1 == false)
-                    {
-                        rotate_bottle(bottle_right_r, cup_one_r, bottle_right_l);
+                    {                      
+                        robotMakeDrinkControl.rotate_bottle(bottle_right_r, cup_one_r, bottle_right_l);
+                        move_1 = true;
+                        stop_run();
                     }
-
-                    else if (move_3 == false)
+                    else if (move_2 == false)
                     {
-                        pick_bottle(bottle_left_l, cup_one_l);
-                        //open_bottle(bottle_center_r, cup_one_r, cup_one_l, bottle_center_l);
+                        robotMakeDrinkControl.open_bottle(bottle_center_r, cup_one_r, cup_one_l, bottle_center_l);
+                        move_2 = true;
+                        stop_run();
                     }
 
                     else
@@ -687,43 +684,41 @@ namespace multimodal
                         mode_4 = false;
                         stop_run();
                     }
-                
+                }
+                else if (drink_4)
+                {
+                    textBox2.Text = DrinkName.third_drink_name + DrinkName.first_drink_name;
 
-                    //     mode_4 = false;
+                    if (move_1 == false)
+                    {             
+                        robotMakeDrinkControl.rotate_bottle(bottle_right_r, cup_one_r, bottle_right_l);
+                        move_1 = true;
+                        stop_run();
+                    }
+                    else if (move_3 == false)
+                    {
+                        robotMakeDrinkControl.pick_bottle(bottle_left_l, cup_one_l, drink_2);
+                        move_3 = true;
+                        stop_run();
+                    }
 
-                    //     pick_bottle(bottle_left_l,cup_one_l);
-
-                    // }      
-
-                    //else if(drink_4 == true)
-                    //{
-
-                    //    textBox2.Text = "中間+右邊瓶子";
-
-
-                    //    if (move_1 == false)
-                    //    {
-                    //        rotate_bottle(bottle_right_r, cup_one_r, bottle_right_l);
-                    //    }
-
-                    //    else if (move_2 == false)
-                    //    {
-                    //        open_bottle(bottle_center_r, cup_one_r, cup_one_l, bottle_center_l);
-                    //    }
-
-                    //    else
-                    //    {
-                    //        mode_4 = false;
-                    //        stop_run();
-                    //    }
+                    else
+                    {
+                        mode_4 = false;
+                        stop_run();
+                    }
                 }
 
             }
 
             else if (mode_4 == false)
             {
+                textBox2.Text = "您的飲料已經準備好了，請拿取，謝謝~";
+              //  robotMakeDrinkControl.pick_cup(cup_one_r,cup_one_l);
+
                 cap.Stop();
-                textBox2.Text = "您的飲料已經準備好了，請自行拿取，謝謝~";
+                cap.Dispose();
+
             }
 
         }
@@ -753,24 +748,24 @@ namespace multimodal
             cap_img.Dispose();
             cap_img = null;
 
-            if (mode_1 == true)
+            if (mode_1 && mode_1_first_answer)
             {
                 if (count1 >= 5 || count2 >= 5 || count3 >= 5)
                 {
                     if (count1 >= 5)
                     {
-                        textBox1.Text = "左邊瓶子";
+                        textBox1.Text = DrinkName.first_drink_name;
                         drink_1 = true;
                     }
                     else if (count2 >= 5)
                     {
-                        textBox1.Text = "右邊瓶子";
+                        textBox1.Text = DrinkName.second_drink_name;
                         drink_2 = true;
                     }
                     else if (count3 >= 5)
                     {
-                        textBox1.Text = "左+右邊瓶子";
-                        drink_3 = true;
+                        textBox1.Text = DrinkName.gradual_name;
+                        gradual_check = true;
                     }
 
                     //else if (count4 >=5)
@@ -789,6 +784,7 @@ namespace multimodal
                     else if (count >= 5)
                     {
                         timer.Enabled = false;
+                        mode_1_first_answer = false;
                         stop_run();
                     }
 
@@ -797,7 +793,7 @@ namespace multimodal
 
                 }
                 else
-                { 
+                {
                     foreach (YoloItem item in items1)
                     {
                         int confidence1 = (int)(item.Confidence * 100);
@@ -818,28 +814,82 @@ namespace multimodal
                 }
             }
 
+            else if (mode_1 && gradual_check && !mode_1_first_answer)
+            {
+                if (count1 >= 5 || count2 >= 5)
+                {
+                    if (count1 >= 5)
+                    {
+                        textBox1.Text = DrinkName.second_drink_name + DrinkName.first_drink_name;
+                        drink_3 = true;
+                    }
+                    else if (count2 >= 5)
+                    {
+                        textBox1.Text = DrinkName.third_drink_name + DrinkName.first_drink_name;
+                        drink_4 = true;
+                    }
+
+
+                    if (count == 0)
+                    {
+                        timer.Enabled = true;
+                        count++;
+                    }
+
+                    else if (count >= 5)
+                    {
+                        timer.Enabled = false;
+                        gradual_check = false;
+                        stop_run();
+                    }
+
+                    else
+                        count++;
+
+                }
+                else
+                {
+                    foreach (YoloItem item in items1)
+                    {
+                        int confidence1 = (int)(item.Confidence * 100);
+                        rect1 = new System.Drawing.Rectangle(item.X, item.Y, item.Width, item.Height);
+                        CvInvoke.Rectangle(img1, rect1, new MCvScalar(65, 105, 255, 255), 3);
+                        CvInvoke.PutText(img1, item.Type + "  " + confidence1, new System.Drawing.Point(item.X, item.Y - 10), 0, 0.5, new MCvScalar(65, 105, 255, 255));
+
+                        if (item.Type == "one")
+                            count1++;
+                        if (item.Type == "two")
+                            count2++;
+
+                    }
+                }
+            }
+
             imageBox1.Image = img1;
-            
+
         }
 
         void Show_capture(object sender, EventArgs e)
         {
             cap_img = cap.QueryFrame().Bitmap;
-           
+
             System.Drawing.Rectangle rect1;
 
             Image<Bgr, Byte> imageCV1 = new Image<Bgr, byte>(cap_img);
             Mat img1 = imageCV1.Mat;
-            
-
+            Mat img1_2  = new Mat ();
+            img1.CopyTo(img1_2);
+           //Size A = new Size(416, 416);
+           // CvInvoke.Resize(img1_2, img1_2,A);
+;
             imageBox1.SizeMode = PictureBoxSizeMode.Zoom;
 
-            byte[] img2 = BmpToBytes(cap_img);
-            items2 = objectWrapper.Detect(img2);
+            byte[] img2 = BmpToBytes(img1_2.Bitmap);
+            items2 = objectWrapper_side.Detect(img2);
             cap_img.Dispose();
             cap_img = null;
 
-            if (count_t<3)
+            if (count_t < 3)
             {
 
                 foreach (YoloItem item in items2)
@@ -850,7 +900,7 @@ namespace multimodal
                     {
 
 
-                        if (item.Type == "bowl" || item.Type == "cup" || item.Type == "mouse")
+                        if (item.Type == "cup" || item.Type == "bowl")
                         {
                             int confidence1 = (int)(item.Confidence * 100);
                             rect1 = new System.Drawing.Rectangle(item.X, item.Y, item.Width, item.Height);
@@ -891,7 +941,7 @@ namespace multimodal
                                 cy3 = item.Y;
                                 cw3 = item.Width;
                                 ch3 = item.Height;
-                                if ((cx1 + 20 > cx3 && cx3 > cx1 -20) && (cy1 + 20 > cy3 && cy3 > cy1 - 20))
+                                if ((cx1 + 20 > cx3 && cx3 > cx1 - 20) && (cy1 + 20 > cy3 && cy3 > cy1 - 20))
                                 {
                                     cx1 = cx3;
                                     cy1 = cy3;
@@ -917,21 +967,36 @@ namespace multimodal
 
                         }
                     }
-                    
-                  
+
+
                 }
 
             }
             else
             {
-                textBox7.Text = count.ToString();
+                Dictionary<TextBox, string> keyValues = new Dictionary<TextBox, string>();
+                keyValues.Add(textBox7, count.ToString());
+                WriteTextSafe(keyValues);
                 stop_run();
             }
 
 
 
-            imageBox1.Image = img1;
+            imageBox1.Image = img1_2;
         }
+        void WriteTextSafe(Dictionary<TextBox,string> obj)
+        {
+            if (obj.ElementAt(0).Key.InvokeRequired)
+            {
+                var d = new SafeCallDelegate(WriteTextSafe);
+                obj.ElementAt(0).Key.Invoke(d, new object[] { obj });
+            }
+            else
+            {
+                obj.ElementAt(0).Key.Text = obj.ElementAt(0).Value;
+            }
+        }
+
         void Show_capture_b(object sender, EventArgs e)
         {
             cap_img = cap.QueryFrame().Bitmap;
@@ -942,11 +1007,11 @@ namespace multimodal
             imageBox1.SizeMode = PictureBoxSizeMode.Zoom;
 
             byte[] img2 = BmpToBytes(cap_img);
-            items2 = objectWrapper.Detect(img2);
+            items2 = objectWrapper_side.Detect(img2);
             cap_img.Dispose();
             cap_img = null;
 
-             if (count<2)
+            if (count < 3)
             {
                 foreach (YoloItem item in items2)
                 {
@@ -1031,7 +1096,7 @@ namespace multimodal
                 textBox2.Text = "Done";
 
 
-                int[] array = new int[] { bx1, bx2 };
+                int[] array = new int[] { bx1, bx2, bx3 };
                 var max = array.Max();
                 var min = array.Min();
 
@@ -1042,34 +1107,33 @@ namespace multimodal
                     brw = bw1;
                     brh = bh1;
 
-                    //if (min == bx2)
-                    //{
-
+                    if (min == bx2)
+                    {
                         blx = bx2;
                         bly = by2;
                         blw = bw2;
                         blh = bh2;
 
 
-                        //bcx = bx3;
-                        //bcy = by3;
-                        //bcw = bw3;
-                        //bch = bh3;
-                   // }
+                        bcx = bx3;
+                        bcy = by3;
+                        bcw = bw3;
+                        bch = bh3;
+                    }
 
-                    //else
-                    //{
-                    //    blx = bx3;
-                    //    bly = by3;
-                    //    blw = bw3;
-                    //    blh = bh3;
+                    else
+                    {
+                        blx = bx3;
+                        bly = by3;
+                        blw = bw3;
+                        blh = bh3;
 
 
-                    //    bcx = bx2;
-                    //    bcy = by2;
-                    //    bcw = bw2;
-                    //    bch = bh2;
-                    //}
+                        bcx = bx2;
+                        bcy = by2;
+                        bcw = bw2;
+                        bch = bh2;
+                    }
 
                 }
                 else if (max == bx2)
@@ -1079,286 +1143,78 @@ namespace multimodal
                     brw = bw2;
                     brh = bh2;
 
-                    //if (min == bx1)
-                    //{
+                    if (min == bx1)
+                    {
                         blx = bx1;
                         bly = by1;
                         blw = bw1;
                         blh = bh1;
 
-                        //bcx = bx3;
-                        //bcy = by3;
-                        //bcw = bw3;
-                    //    bch = bh3;
-                    //}
+                        bcx = bx3;
+                        bcy = by3;
+                        bcw = bw3;
+                        bch = bh3;
+                    }
 
-                    //else
-                    //{
-                    //    blx = bx3;
-                    //    bly = by3;
-                    //    blw = bw3;
-                    //    blh = bh3;
+                    else
+                    {
+                        blx = bx3;
+                        bly = by3;
+                        blw = bw3;
+                        blh = bh3;
 
-                    //    bcx = bx1;
-                    //    bcy = by1;
-                    //    bcw = bw1;
-                    //    bch = bh1;
-                    //}
+                        bcx = bx1;
+                        bcy = by1;
+                        bcw = bw1;
+                        bch = bh1;
+                    }
                 }
 
-                //else if (max == bx3)
-                //{
+                else if (max == bx3)
+                {
 
-                //    brx = bx3;
-                //    bry = by3;
-                //    brw = bw3;
-                //    brh = bh3;
+                    brx = bx3;
+                    bry = by3;
+                    brw = bw3;
+                    brh = bh3;
 
-                //    if (min == bx1)
-                //    {
-                //        blx = bx1;
-                //        bly = by1;
-                //        blw = bw1;
-                //        blh = bh1;
+                    if (min == bx1)
+                    {
+                        blx = bx1;
+                        bly = by1;
+                        blw = bw1;
+                        blh = bh1;
 
-                //        bcx = bx2;
-                //        bcy = by2;
-                //        bcw = bw2;
-                //        bch = bh2;
-                //    }
+                        bcx = bx2;
+                        bcy = by2;
+                        bcw = bw2;
+                        bch = bh2;
+                    }
 
-                //    else
-                //    {
-                //        blx = bx2;
-                //        bly = by2;
-                //        blw = bw2;
-                //        blh = bh2;
+                    else
+                    {
+                        blx = bx2;
+                        bly = by2;
+                        blw = bw2;
+                        blh = bh2;
 
-                //        bcx = bx1;
-                //        bcy = by1;
-                //        bcw = bw1;
-                //        bch = bh1;
-                //    }
-                //}          
+                        bcx = bx1;
+                        bcy = by1;
+                        bcw = bw1;
+                        bch = bh1;
+                    }
+                }
 
                 stop_run();
             }
-
-            
 
 
             imageBox1.Image = img1;
         }
 
-        void rotate_bottle(float [] bottle_r, float [] cup_r, float [] bottle_l)
-        {
-            textBox2.Text = "Test";
-            if (uRServerAction_right == null)
-            {
-                throw new DriveNotFoundException("完蛋了。");
-            }
+        
 
-            uRServerAction_left.GripperOpen();
-            uRServerAction_right.GripperOpen();
-            uRServerAction_right.Move(robot_initial_pos_r);
-            uRServerAction_left.Move(robot_initial_pos_l);
-
-            uRServerAction_left.GripperCloseForceMIN();
-
-            uRServerAction_left.Move(new float[] { bottle_l[0] + image_left_x, 0.01F, bottle_l[1] + image_left_y - 0.04F, 2.4F, 2.5F, 1.5F });
-            uRServerAction_left.Move(new float[] { bottle_l[0] + image_left_x, 0.04F, bottle_l[1]+image_left_y-0.04F, 2.4F, 2.5F, 1.5F });
-
-            uRServerAction_left.ForceMode(0, 30);
-
-            uRServerAction_right.Move(new float[] { bottle_r[0] + image_right_x, 0.250F, bottle_r[1] + image_right_y + 0.02F, 2.174F, -2.233F, 0.002F });
-            uRServerAction_right.Move(new float[] { bottle_r[0] + image_right_x, 0.250F, bottle_r[1] + image_right_y, 2.174F, -2.233F, 0.002F });
-            Thread.Sleep(2000);
-
-            uRServerAction_left.EndForceMode();
-            uRServerAction_left.Move(new float[] { bottle_l[0] + image_left_x, 0.01F, bottle_l[1] + image_left_y - 0.04F, 2.4F, 2.5F, 1.5F });
-            uRServerAction_left.Move(robot_initial_pos_l);
-            uRServerAction_left.GripperOpen();
-
-           
-            uRServerAction_right.GripperCloseForceMAX();
-
-            uRServerAction_right.Move(new float[] { bottle_r[0] + image_right_x, 0.110F, bottle_r[1] + image_right_y, 2.174F, -2.233F, 0.002F });
-            uRServerAction_right.Move(new float[] { robot_initial_pos_rc[0], 0.110F, bottle_r[1] + image_right_y, 2.174F, -2.233F, 0.002F });
-            uRServerAction_right.Move(robot_initial_pos_rc);
-
-            Thread.Sleep(2000);
-            robot_initial_pos_lc[1] -= 0.02F;
-            uRServerAction_left.Move(robot_initial_pos_lc);
-            robot_initial_pos_lc[1] += 0.02F;
-            uRServerAction_left.Move(robot_initial_pos_lc);
-            Thread.Sleep(1000);
-
-
-            uRServerAction_left.TurnJoint(4, -15, 2);
-            Thread.Sleep(2000);
-
-            uRServerAction_left.Move(robot_initial_pos_lc);
-
-            uRServerAction_left.GripperCloseForceMIN();
-
-            robot_initial_pos_lc[1] -= 0.020F;
-
-            uRServerAction_left.Move(robot_initial_pos_lc);
-
-            Thread.Sleep(2000);
-
-            uRServerAction_right.Move(new float[] { cup_r[0] , 0.110F, cup_r[1] + 0.040F, 2.26F, -2.27F, -0.06F });
-            uRServerAction_right.Move(new float[] { cup_r[0] , 0.180F, cup_r[1] + 0.040F, 2.26F, -2.27F, -0.06F });
-
-            uRServerAction_right.MoveJoint(5, 1.75F);
-            Thread.Sleep(3000);
-            uRServerAction_right.MoveJoint(5, -1.75F);
-
-
-            uRServerAction_right.Move(robot_initial_pos_rc);
-            Thread.Sleep(2000);
-
-            robot_initial_pos_lc[1] += 0.020F;
-            uRServerAction_left.Move(robot_initial_pos_lc);
-            uRServerAction_left.GripperOpen();
-
-            Thread.Sleep(2000);
-
-            robot_initial_pos_lc[1] -= 0.01F;
-            uRServerAction_left.Move(robot_initial_pos_lc);
-
-            //uRServerAction_left.GripperClose();
-            //uRServerAction_left.ForceMode(2, 10);
-            //uRServerAction_left.MoveJoint(5, -3.1416F);
-            //uRServerAction_left.EndForceMode();
-            //uRServerAction_left.GripperOpen();
-            //uRServerAction_left.MoveJoint(5, 3.1416F);
-            //uRServerAction_left.GripperClose();
-            //uRServerAction_left.ForceMode(2, 10);
-            //uRServerAction_left.MoveJoint(5, -3.1416F);
-            //uRServerAction_left.EndForceMode();
-            //uRServerAction_left.GripperOpen();
-            //uRServerAction_left.MoveJoint(5, 3.1416F);
-            //uRServerAction_left.GripperClose();
-
-            //uRServerAction_right.ForceMode(0,6);
-            uRServerAction_left.TurnJoint(-4, 25, 2);
-            // uRServerAction_right.EndForceMode();
-            Thread.Sleep(5000);
-            robot_initial_pos_rc[1] += 0.02F;
-            uRServerAction_right.Move(robot_initial_pos_rc);
-            //robot_initial_pos_lc[1] -= 0.02F;
-            //uRServerAction_left.Move(robot_initial_pos_lc);
-            Thread.Sleep(2000);
-
-            uRServerAction_left.Move(robot_initial_pos_l);
-
-            uRServerAction_right.Move(new float[] { bottle_r[0] + image_right_x, 0.100F, bottle_r[1] + image_right_y, 2.26F, -2.27F, -0.06F });
-            
-            uRServerAction_right.Move(new float[] { bottle_r[0] + image_right_x, 0.242F, bottle_r[1] + image_right_y, 2.26F, -2.27F, -0.06F });
-            uRServerAction_right.GripperOpen();
-            uRServerAction_right.Move(new float[] { bottle_r[0] + image_right_x, 0.242F, bottle_r[1] + image_right_y + 0.03F, 2.26F, -2.27F, -0.06F });
-
-            uRServerAction_right.Move(robot_initial_pos_r);
-            move_1 = true;
-            stop_run();
-        }
-
-
-
-        void open_bottle(float[] bottle_r, float[] cup_r, float[] cup_l, float[] bottle_l)
-        {
-            uRServerAction_left.GripperOpen();
-            uRServerAction_right.GripperOpen();
-            uRServerAction_right.Move(robot_initial_pos_r);
-            uRServerAction_left.Move(robot_initial_pos_l);
-
-
-            uRServerAction_right.Move(new float[] { bottle_r[0] + image_right_x - 0.01F, 0.077F, bottle_r[1] + image_right_y + 0.050F, 2.37F, -2.54F, -1.07F });
-            uRServerAction_right.Move(new float[] { bottle_r[0] + image_right_x - 0.01F, 0.077F, bottle_r[1] + image_right_y + 0.015F, 2.37F, -2.54F, -1.07F });
-
-            uRServerAction_right.GripperCloseForceMAX();
-            Thread.Sleep(1000);
-
-            uRServerAction_left.Move(new float[] { bottle_l[0] + image_left_x + 0.018F, 0.210F, bottle_l[1] + image_left_y + 0.02F, 0.06F, -3.127F, 0.093F });
-            uRServerAction_left.Move(new float[] { bottle_l[0] + image_left_x + 0.018F, 0.210F, bottle_l[1] + image_left_y - 0.01F, 0.06F, -3.127F, 0.093F });
-            uRServerAction_left.GripperCloseForceMAX();
-            Thread.Sleep(2000);
-
-            uRServerAction_right.GripperOpen();
-
-            uRServerAction_right.Move(new float[] { bottle_r[0] + image_right_x - 0.017F, 0.070F, bottle_r[1] + image_right_y + 0.050F, 2.37F, -2.54F, -1.07F });
-            uRServerAction_right.Move(robot_initial_pos_r);
-            Thread.Sleep(2000);
-
-            uRServerAction_left.Move(new float[] { cup_l[0] + image_left_x + 0.1F, 0.150F, cup_l[1] + image_left_y, 0.06F, -3.127F, 0.093F });
-
-            uRServerAction_left.MoveJoint(5, 1.5F);
-            Thread.Sleep(5000);
-            uRServerAction_left.MoveJoint(5, -1.5F);
-
-
-
-            uRServerAction_right.GripperCloseForceMIN();
-            uRServerAction_right.Move(new float[] { cup_r[0] + image_right_x - 0.180F, 0.115F, cup_r[1] + image_right_y + 0.035F, 2.21F, -2.21F, -0.035F });
-            uRServerAction_right.Move(new float[] { cup_r[0] + image_right_x - 0.180F, 0.055F, cup_r[1] + image_right_y + 0.035F, 2.21F, -2.21F, -0.035F });
-            uRServerAction_right.Move(new float[] { cup_r[0] + image_right_x - 0.100F, 0.055F, cup_r[1] + image_right_y + 0.035F, 2.21F, -2.21F, -0.035F });
-
-            uRServerAction_right.ForceMode(0, -15);
-            Thread.Sleep(2000);
-            uRServerAction_right.EndForceMode();
-            uRServerAction_right.Move(new float[] { cup_r[0] + image_right_x - 0.100F, 0.055F, cup_r[1] + image_right_y + 0.06F, 2.21F, -2.21F, -0.035F });
-            uRServerAction_right.Move(robot_initial_pos_r);
-            uRServerAction_right.GripperOpen();
-
-            uRServerAction_left.Move(new float[] { bottle_l[0] + image_left_x + 0.018F, 0.210F, bottle_l[1] + image_left_y - 0.01F, 0.06F, -3.127F, 0.093F });
-            uRServerAction_left.GripperOpen();
-            uRServerAction_left.Move(new float[] { bottle_l[0] + image_left_x + 0.018F, 0.210F, bottle_l[1] + image_left_y + 0.02F, 0.06F, -3.127F, 0.093F });
-            uRServerAction_left.Move(robot_initial_pos_l);
-
-            move_2 = true;
-            stop_run();
-
-        }
-
-
-
-        void pick_bottle(float[] bottle_l, float [] cup_l)
-        {
-            uRServerAction_left.GripperOpen();
-            uRServerAction_right.GripperOpen();
-            uRServerAction_right.Move(robot_initial_pos_r);
-            uRServerAction_left.Move(robot_initial_pos_l);
-
-            uRServerAction_left.Move(new float[] { bottle_l[0] + image_left_x , 0.250F, bottle_l[1] + image_left_y + 0.01F, 0.06F, -3.127F, 0.093F });
-            uRServerAction_left.Move(new float[] { bottle_l[0]+image_left_x , 0.250F, bottle_l[1]+ image_left_y-0.04F, 0.06F, -3.127F, 0.093F });
-            uRServerAction_left.GripperCloseForceMIN();
-            Thread.Sleep(1000);
-            uRServerAction_left.Move(new float[] { cup_l[0] + image_left_x - 0.08F, 0.190F, cup_l[1] + image_left_y-0.02F, 0.06F, -3.127F, 0.093F });
-
-            uRServerAction_left.MoveJoint(5, -1.5F);
-            if(drink_2 ==true)
-            {
-                Thread.Sleep(700);
-            }
-            else if (drink_3 == true)
-            {
-              //  Thread.Sleep(100);
-            }
-            
-            uRServerAction_left.MoveJoint(5, 1.5F);
-
-            uRServerAction_left.Move(new float[] { bottle_l[0] + image_left_x, 0.250F, bottle_l[1] + image_left_y - 0.04F, 0.06F, -3.127F, 0.093F });
-            uRServerAction_left.GripperOpen();
-            uRServerAction_left.Move(new float[] { bottle_l[0] + image_left_x , 0.250F, bottle_l[1] + image_left_y + 0.01F, 0.06F, -3.127F, 0.093F });
-
-            uRServerAction_left.Move(robot_initial_pos_l);
-
-            move_3 = true;
-            stop_run();
-        }
-
-
+        
     }
 
 
